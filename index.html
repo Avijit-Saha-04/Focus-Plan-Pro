@@ -28,14 +28,13 @@
         }
     </script>
     <style>
-        .habit-grid::-webkit-scrollbar { height: 6px; width: 6px; }
+        .habit-grid::-webkit-scrollbar { height: 4px; width: 4px; }
         .habit-grid::-webkit-scrollbar-track { background: transparent; }
         .habit-grid::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .dark .habit-grid::-webkit-scrollbar-thumb { background: #4b5563; }
         
         .drag-over { border: 2px dashed #4F46E5; }
-        /* Adjusted checkbox size for tighter fits */
-        .checkbox-custom { accent-color: #4F46E5; width: 1rem; height: 1rem; }
+        .checkbox-custom { accent-color: #4F46E5; width: 1.1rem; height: 1.1rem; }
 
         tr:hover .delete-btn { opacity: 1; }
         @media (max-width: 768px) { .delete-btn { opacity: 1; color: #9ca3af; } }
@@ -139,14 +138,15 @@
                             <button onclick="addNewHabit()" class="text-[10px] md:text-xs bg-primary text-white px-3 py-1.5 rounded hover:bg-indigo-600"><i class="fas fa-plus mr-1"></i> Add</button>
                         </div>
                     </div>
-                    <div class="overflow-y-auto habit-grid flex-1 relative w-full">
-                        <table class="w-full text-left border-collapse table-fixed">
+                    
+                    <div class="overflow-x-auto md:overflow-x-hidden overflow-y-auto habit-grid flex-1 relative w-full">
+                        <table class="w-full text-left border-collapse">
                             <thead class="sticky top-0 z-10 bg-sheetHeader dark:bg-sheetHeaderDark shadow-sm">
                                 <tr>
-                                    <th class="sticky left-0 z-20 bg-sheetHeader dark:bg-sheetHeaderDark p-3 w-40 md:w-72 border-r border-gray-300 dark:border-gray-600 font-semibold text-xs md:text-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Task Name</th>
+                                    <th class="sticky left-0 z-20 bg-sheetHeader dark:bg-sheetHeaderDark p-3 w-32 md:w-72 border-r border-gray-300 dark:border-gray-600 font-semibold text-xs md:text-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Task Name</th>
                                     
-                                    <th id="daysHeaderRow" class="p-0 w-full">
-                                        <div class="flex w-full"></div>
+                                    <th id="daysHeaderRow" class="p-0">
+                                        <div class="flex"></div>
                                     </th>
                                 </tr>
                             </thead>
@@ -295,7 +295,7 @@
             const msg = document.getElementById('authMessage');
 
             if (isLogin) {
-                if (user === "**********" && pass === "**********") {
+                if (user === "*********" && pass === "*********") {
                     loginSuccess(user);
                 } else {
                     const stored = localStorage.getItem('pc_users');
@@ -325,8 +325,8 @@
             const stored = localStorage.getItem('pc_users');
             let usersDb = stored ? JSON.parse(stored) : {};
             
-            if (user === "**********" && !usersDb[user]) {
-                usersDb[user] = { password: "**********", habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
+            if (user === "*********" && !usersDb[user]) {
+                usersDb[user] = { password: "*********", habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
                 localStorage.setItem('pc_users', JSON.stringify(usersDb));
             }
             
@@ -353,7 +353,7 @@
             document.getElementById('currentMonthDisplay').innerText = monthNames[date.getMonth()];
             document.getElementById('userNotes').value = userData.notes;
             
-            if(currentUser === "**********") {
+            if(currentUser === "*********") {
                 document.getElementById('adminBtn').classList.remove('hidden');
             } else {
                 document.getElementById('adminBtn').classList.add('hidden');
@@ -432,14 +432,14 @@
             closeProfileSettings();
         }
 
-        // --- UPDATED RENDER HEADER: Flexible Width ---
+        // --- UPDATED HEADER RENDER: Spacing for Mobile ---
         function renderHeader() {
             const headerRow = document.getElementById('daysHeaderRow').firstElementChild;
             headerRow.innerHTML = '';
             for(let i=1; i<=DAYS_IN_MONTH; i++) {
                 const dayDiv = document.createElement('div');
-                // Use flex-1 instead of w-8 to fit space
-                dayDiv.className = "flex-1 min-w-0 flex flex-col items-center justify-center text-[10px] text-gray-500 py-1 border-r border-gray-200 dark:border-gray-700";
+                // min-w-[28px] ensures spacing on mobile (triggers scroll). flex-1 fits on desktop.
+                dayDiv.className = "flex-1 min-w-[28px] md:min-w-0 flex flex-col items-center justify-center text-[10px] text-gray-500 py-1 border-r border-gray-200 dark:border-gray-700";
                 const daysOfWeek = ['Su','Mo','Tu','We','Th','Fr','Sa'];
                 const dayName = daysOfWeek[i % 7];
                 dayDiv.innerHTML = `<span class="mb-1">${dayName}</span><span class="font-bold">${i}</span>`;
@@ -447,7 +447,7 @@
             }
         }
 
-        // --- UPDATED RENDER TABLE: Flexible Width ---
+        // --- UPDATED TABLE RENDER: Spacing for Mobile ---
         function renderTable() {
             const tbody = document.getElementById('habitTableBody');
             tbody.innerHTML = '';
@@ -464,7 +464,7 @@
                 tr.addEventListener('dragleave', dragLeave);
 
                 const nameTd = document.createElement('td');
-                nameTd.className = "p-3 border-r border-gray-200 dark:border-gray-600 sticky left-0 z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]";
+                nameTd.className = "p-3 border-r border-gray-200 dark:border-gray-600 sticky left-0 z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-32 md:w-72";
                 
                 nameTd.innerHTML = `
                     <div class="flex items-center justify-between gap-1 md:gap-2">
@@ -480,14 +480,14 @@
                 tr.appendChild(nameTd);
 
                 const gridTd = document.createElement('td');
-                gridTd.className = "p-0 w-full"; // Ensure cell is full width
+                gridTd.className = "p-0";
                 const gridDiv = document.createElement('div');
-                gridDiv.className = "flex w-full"; // Ensure container is full width
+                gridDiv.className = "flex";
 
                 for(let i=1; i<=DAYS_IN_MONTH; i++) {
                     const checkDiv = document.createElement('div');
-                    // Use flex-1 to distribute space evenly
-                    checkDiv.className = "flex-1 min-w-0 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
+                    // min-w-[28px] allows comfortable tapping on mobile
+                    checkDiv.className = "flex-1 min-w-[28px] md:min-w-0 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
                     const checkbox = document.createElement('input');
                     checkbox.type = "checkbox";
                     checkbox.className = "rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
@@ -709,7 +709,7 @@
                     viewUserLogs(user, userObj);
                 };
 
-                const deleteBtnHtml = (user === '**********') 
+                const deleteBtnHtml = (user === '*********') 
                     ? `<span class="text-xs text-blue-500 font-bold px-2 py-1 bg-blue-100 rounded">ADMIN</span>`
                     : `<div class="flex gap-2">
                          <button onclick="viewUserLogs('${user}', JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(userObj))}')))" class="text-gray-400 hover:text-primary p-2"><i class="fas fa-eye"></i></button>
@@ -774,7 +774,7 @@
         }
 
         function deleteUser(username) {
-            if(username === '**********') return;
+            if(username === '*********') return;
             if(confirm(`PERMANENTLY delete user: "${username}"?`)) {
                 const stored = localStorage.getItem('pc_users');
                 let usersDb = stored ? JSON.parse(stored) : {};
@@ -785,7 +785,7 @@
         }
 
         function clearDatabase() {
-            if (currentUser !== '**********') return;
+            if (currentUser !== '*********') return;
             if (confirm("DANGER: This will wipe ALL users and data.\n\nAre you absolutely sure?")) {
                 if(confirm("Last Warning: This action cannot be undone.")) {
                     localStorage.removeItem('pc_users');
