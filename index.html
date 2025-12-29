@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Progress Code | Ultimate Tracker</title>
+    <title>Focus Plan Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="favicon.png">
 
     <script>
         tailwind.config = {
@@ -33,7 +34,8 @@
         .dark .habit-grid::-webkit-scrollbar-thumb { background: #4b5563; }
         
         .drag-over { border: 2px dashed #4F46E5; }
-        .checkbox-custom { accent-color: #4F46E5; width: 1.25rem; height: 1.25rem; }
+        /* Adjusted checkbox size for tighter fits */
+        .checkbox-custom { accent-color: #4F46E5; width: 1rem; height: 1rem; }
 
         tr:hover .delete-btn { opacity: 1; }
         @media (max-width: 768px) { .delete-btn { opacity: 1; color: #9ca3af; } }
@@ -51,7 +53,7 @@
 
     <div id="authSection" class="fixed inset-0 z-50 bg-lightBg dark:bg-darkBg flex items-center justify-center overflow-auto p-4">
         <div class="w-full max-w-md p-4">
-            <h2 class="text-4xl font-bold text-center mb-8 text-primary">Progress Code</h2>
+            <h2 class="text-4xl font-bold text-center mb-8 text-primary">TBSOTF</h2>
             
             <div class="flex justify-center mb-8 bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
                 <button onclick="toggleAuth('login')" id="tab-login" class="w-1/2 py-2 rounded-md bg-white dark:bg-gray-600 shadow-sm font-semibold transition text-sm md:text-base">Log In</button>
@@ -137,12 +139,15 @@
                             <button onclick="addNewHabit()" class="text-[10px] md:text-xs bg-primary text-white px-3 py-1.5 rounded hover:bg-indigo-600"><i class="fas fa-plus mr-1"></i> Add</button>
                         </div>
                     </div>
-                    <div class="overflow-auto habit-grid flex-1 relative w-full">
-                        <table class="w-full text-left border-collapse">
+                    <div class="overflow-y-auto habit-grid flex-1 relative w-full">
+                        <table class="w-full text-left border-collapse table-fixed">
                             <thead class="sticky top-0 z-10 bg-sheetHeader dark:bg-sheetHeaderDark shadow-sm">
                                 <tr>
-                                    <th class="sticky left-0 z-20 bg-sheetHeader dark:bg-sheetHeaderDark p-3 w-40 md:w-72 min-w-[150px] md:min-w-[250px] border-r border-gray-300 dark:border-gray-600 font-semibold text-xs md:text-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Task Name</th>
-                                    <th id="daysHeaderRow" class="p-0"><div class="flex"></div></th>
+                                    <th class="sticky left-0 z-20 bg-sheetHeader dark:bg-sheetHeaderDark p-3 w-40 md:w-72 border-r border-gray-300 dark:border-gray-600 font-semibold text-xs md:text-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Task Name</th>
+                                    
+                                    <th id="daysHeaderRow" class="p-0 w-full">
+                                        <div class="flex w-full"></div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="habitTableBody" class="text-sm"></tbody>
@@ -276,7 +281,6 @@
             saveData();
         }
 
-        // --- AUTH ---
         function toggleAuth(type) {
             isLogin = type === 'login';
             document.getElementById('tab-login').className = isLogin ? "w-1/2 py-2 rounded-md bg-white dark:bg-gray-600 shadow-sm font-semibold transition text-sm md:text-base" : "w-1/2 py-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 transition text-sm md:text-base";
@@ -322,7 +326,7 @@
             let usersDb = stored ? JSON.parse(stored) : {};
             
             if (user === "**********" && !usersDb[user]) {
-                usersDb[user] = { password: "**********, habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
+                usersDb[user] = { password: "**********", habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
                 localStorage.setItem('pc_users', JSON.stringify(usersDb));
             }
             
@@ -343,7 +347,6 @@
             location.reload();
         }
 
-        // --- DASHBOARD & PROFILE UI ---
         function initDashboard() {
             const date = new Date();
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -375,7 +378,6 @@
             }
         }
 
-        // --- PROFILE SETTINGS ---
         function openProfileSettings() {
             document.getElementById('profileUsernameDisplay').innerText = "@" + currentUser;
             document.getElementById('profileName').value = userData.profile.name || "";
@@ -404,7 +406,6 @@
         function handleProfileUpload(input) {
             const file = input.files[0];
             if(!file) return;
-            
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Info = e.target.result;
@@ -431,12 +432,14 @@
             closeProfileSettings();
         }
 
+        // --- UPDATED RENDER HEADER: Flexible Width ---
         function renderHeader() {
             const headerRow = document.getElementById('daysHeaderRow').firstElementChild;
             headerRow.innerHTML = '';
             for(let i=1; i<=DAYS_IN_MONTH; i++) {
                 const dayDiv = document.createElement('div');
-                dayDiv.className = "w-8 flex flex-col items-center justify-center text-xs text-gray-500 py-2 border-r border-gray-200 dark:border-gray-700";
+                // Use flex-1 instead of w-8 to fit space
+                dayDiv.className = "flex-1 min-w-0 flex flex-col items-center justify-center text-[10px] text-gray-500 py-1 border-r border-gray-200 dark:border-gray-700";
                 const daysOfWeek = ['Su','Mo','Tu','We','Th','Fr','Sa'];
                 const dayName = daysOfWeek[i % 7];
                 dayDiv.innerHTML = `<span class="mb-1">${dayName}</span><span class="font-bold">${i}</span>`;
@@ -444,6 +447,7 @@
             }
         }
 
+        // --- UPDATED RENDER TABLE: Flexible Width ---
         function renderTable() {
             const tbody = document.getElementById('habitTableBody');
             tbody.innerHTML = '';
@@ -476,16 +480,17 @@
                 tr.appendChild(nameTd);
 
                 const gridTd = document.createElement('td');
-                gridTd.className = "p-0";
+                gridTd.className = "p-0 w-full"; // Ensure cell is full width
                 const gridDiv = document.createElement('div');
-                gridDiv.className = "flex";
+                gridDiv.className = "flex w-full"; // Ensure container is full width
 
                 for(let i=1; i<=DAYS_IN_MONTH; i++) {
                     const checkDiv = document.createElement('div');
-                    checkDiv.className = "w-8 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
+                    // Use flex-1 to distribute space evenly
+                    checkDiv.className = "flex-1 min-w-0 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
                     const checkbox = document.createElement('input');
                     checkbox.type = "checkbox";
-                    checkbox.className = "w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
+                    checkbox.className = "rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
                     if(habit.history.includes(i)) checkbox.checked = true;
                     checkbox.addEventListener('change', () => toggleHabit(index, i));
                     checkDiv.appendChild(checkbox);
@@ -527,16 +532,8 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            suggestedMax: userData.habits.length, 
-                            grid: { display: false },
-                            ticks: { font: { size: 10 } }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { display: false } 
-                        }
+                        y: { beginAtZero: true, suggestedMax: userData.habits.length, grid: { display: false }, ticks: { font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { display: false } }
                     },
                     plugins: { legend: { display: false } }
                 }
@@ -564,9 +561,7 @@
             const currentScore = calculateCurrentProgress();
             const dataPoints = [45, 52, 49, 60, 55, 70, 68, 85, 72, 65, currentScore, 75];
 
-            if (yearlyChartInstance) {
-                yearlyChartInstance.destroy();
-            }
+            if (yearlyChartInstance) { yearlyChartInstance.destroy(); }
 
             yearlyChartInstance = new Chart(ctx, {
                 type: 'line',
@@ -694,7 +689,6 @@
 
         function toggleDarkMode() { document.documentElement.classList.toggle('dark'); }
 
-        // --- ADMIN DASHBOARD ---
         function adminDashboard() {
             const db = JSON.parse(localStorage.getItem('pc_users')) || {};
             const container = document.getElementById('userListContainer');
@@ -703,7 +697,6 @@
             Object.keys(db).forEach(user => {
                 const userObj = db[user];
                 const habitCount = userObj.habits ? userObj.habits.length : 0;
-                // Get profile img or default
                 const profileImg = (userObj.profile && userObj.profile.image) 
                     ? `<img src="${userObj.profile.image}" class="w-8 h-8 rounded-full border mr-2 object-cover">`
                     : `<div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 text-xs text-gray-500"><i class="fas fa-user"></i></div>`;
@@ -746,7 +739,6 @@
             const logs = userObj.logs || [];
             const profile = userObj.profile || {};
             
-            // Build Profile Header
             const avatar = profile.image ? `<img src="${profile.image}" class="w-16 h-16 rounded-full border-2 border-primary object-cover">` : `<div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-400"><i class="fas fa-user"></i></div>`;
             
             let html = `
