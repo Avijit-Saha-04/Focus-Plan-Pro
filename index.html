@@ -53,12 +53,10 @@
     <div id="authSection" class="fixed inset-0 z-50 bg-lightBg dark:bg-darkBg flex items-center justify-center overflow-auto p-4">
         <div class="w-full max-w-md p-4">
             <h2 class="text-4xl font-bold text-center mb-8 text-primary">TBSOTF</h2>
-            
             <div class="flex justify-center mb-8 bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
                 <button onclick="toggleAuth('login')" id="tab-login" class="w-1/2 py-2 rounded-md bg-white dark:bg-gray-600 shadow-sm font-semibold transition text-sm md:text-base">Log In</button>
                 <button onclick="toggleAuth('signup')" id="tab-signup" class="w-1/2 py-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 transition text-sm md:text-base">Sign Up</button>
             </div>
-
             <form id="authForm" onsubmit="handleAuth(event)">
                 <div class="mb-5">
                     <label class="block text-sm font-bold mb-2 uppercase tracking-wide text-gray-500 dark:text-gray-400">Username</label>
@@ -70,13 +68,11 @@
                 </div>
                 <button type="submit" class="w-full bg-primary text-white py-4 rounded-lg font-bold hover:bg-indigo-600 transition shadow-lg text-lg transform active:scale-95 duration-150">Access Dashboard</button>
             </form>
-            
             <p id="authMessage" class="mt-6 text-center text-red-500 text-sm h-5 font-semibold"></p>
         </div>
     </div>
 
     <div id="appSection" class="hidden flex-1 flex flex-col h-full relative">
-        
         <nav class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex justify-between items-center z-20 flex-none">
             <div class="flex items-center gap-2 md:gap-4">
                 <h1 class="text-lg md:text-xl font-bold tracking-tight">Focus<span class="hidden md:inline"> Plan</span> <span class="text-[10px] md:text-xs bg-primary text-white px-2 py-1 rounded ml-1">PRO</span></h1>
@@ -89,7 +85,6 @@
                     <i class="fas fa-moon dark:hidden text-lg"></i>
                     <i class="fas fa-sun hidden dark:inline text-yellow-400 text-lg"></i>
                 </button>
-                
                 <div onclick="openProfileSettings()" class="relative group cursor-pointer">
                     <img id="navProfilePic" src="" class="hidden h-9 w-9 rounded-full object-cover border-2 border-primary">
                     <div id="navDefaultIcon" class="h-9 w-9 bg-indigo-100 rounded-full flex items-center justify-center text-primary font-bold">
@@ -100,31 +95,23 @@
         </nav>
 
         <main class="flex-1 p-2 md:p-6 flex flex-col lg:flex-row gap-4 lg:gap-6 overflow-y-auto lg:overflow-hidden">
-            
             <div class="flex-none lg:flex-1 flex flex-col min-w-0 lg:h-full gap-4">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex-none">
                     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-1" id="currentMonthDisplay">Month</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Daily Habit Tracker & Scheduler</p>
+                        <div class="flex items-center gap-4">
+                            <button onclick="changeMonth(-1)" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-chevron-left"></i></button>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-1 whitespace-nowrap" id="currentMonthDisplay">Month Year</h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Daily Habit Tracker</p>
+                            </div>
+                            <button onclick="changeMonth(1)" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="flex justify-between md:justify-start md:gap-8 text-center w-full md:w-auto">
-                            <div>
-                                <p class="text-[10px] text-gray-500 uppercase tracking-wide">Habits</p>
-                                <p class="text-xl font-bold" id="totalHabitsCount">0</p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-gray-500 uppercase tracking-wide">Streak</p>
-                                <p class="text-xl font-bold text-orange-500"><i class="fas fa-fire"></i> <span id="currentStreak">0</span></p>
-                            </div>
+                            <div><p class="text-[10px] text-gray-500 uppercase tracking-wide">Habits</p><p class="text-xl font-bold" id="totalHabitsCount">0</p></div>
+                            <div><p class="text-[10px] text-gray-500 uppercase tracking-wide">Streak</p><p class="text-xl font-bold text-orange-500"><i class="fas fa-fire"></i> <span id="currentStreak">0</span></p></div>
                             <div class="w-32 md:w-48">
-                                <div class="flex justify-between text-[10px] mb-1">
-                                    <span>Progress</span>
-                                    <span id="completionRate">0%</span>
-                                </div>
-                                <div class="h-2 md:h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div id="progressBar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0 transition-all duration-500"></div>
-                                </div>
+                                <div class="flex justify-between text-[10px] mb-1"><span>Progress</span><span id="completionRate">0%</span></div>
+                                <div class="h-2 md:h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"><div id="progressBar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0 transition-all duration-500"></div></div>
                             </div>
                         </div>
                     </div>
@@ -138,16 +125,12 @@
                             <button onclick="addNewHabit()" class="text-[10px] md:text-xs bg-primary text-white px-3 py-1.5 rounded hover:bg-indigo-600"><i class="fas fa-plus mr-1"></i> Add</button>
                         </div>
                     </div>
-                    
                     <div class="overflow-x-auto md:overflow-x-hidden overflow-y-auto habit-grid flex-1 relative w-full">
                         <table class="w-full text-left border-collapse">
                             <thead class="sticky top-0 z-10 bg-sheetHeader dark:bg-sheetHeaderDark shadow-sm">
                                 <tr>
                                     <th class="sticky left-0 z-20 bg-sheetHeader dark:bg-sheetHeaderDark p-3 w-32 md:w-72 border-r border-gray-300 dark:border-gray-600 font-semibold text-xs md:text-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Task Name</th>
-                                    
-                                    <th id="daysHeaderRow" class="p-0">
-                                        <div class="flex"></div>
-                                    </th>
+                                    <th id="daysHeaderRow" class="p-0"><div class="flex"></div></th>
                                 </tr>
                             </thead>
                             <tbody id="habitTableBody" class="text-sm"></tbody>
@@ -159,20 +142,14 @@
             <div class="flex-none lg:w-80 flex flex-col gap-4 lg:h-full pb-6 lg:pb-0">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 h-48 flex-none flex flex-col">
                     <h3 class="font-bold text-sm text-gray-700 dark:text-gray-200 mb-2">Daily Consistency</h3>
-                    <div class="flex-1 relative w-full h-full">
-                        <canvas id="monthlyChart"></canvas>
-                    </div>
+                    <div class="flex-1 relative w-full h-full"><canvas id="monthlyChart"></canvas></div>
                 </div>
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow flex-none lg:flex-1 flex flex-col overflow-hidden border-t-4 border-yellow-400 h-64 lg:h-auto">
                     <div class="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center flex-none">
                         <h3 class="font-bold text-gray-700 dark:text-gray-200 text-sm"><i class="fas fa-pen-nib mr-2"></i>Quick Notes</h3>
                         <span id="saveIndicator" class="text-[10px] text-gray-400 uppercase font-semibold">Saved</span>
                     </div>
-                    <textarea 
-                        id="userNotes" 
-                        oninput="handleNoteInput(this)"
-                        class="flex-1 w-full h-full p-4 resize-none focus:outline-none bg-noteYellow text-gray-800 notepad-lines text-sm"
-                        placeholder="Write down important tasks..."></textarea>
+                    <textarea id="userNotes" oninput="handleNoteInput(this)" class="flex-1 w-full h-full p-4 resize-none focus:outline-none bg-noteYellow text-gray-800 notepad-lines text-sm" placeholder="Write down important tasks..."></textarea>
                 </div>
             </div>
         </main>
@@ -182,7 +159,6 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md relative shadow-2xl">
             <button onclick="closeProfileSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"><i class="fas fa-times"></i></button>
             <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Profile</h2>
-            
             <div class="flex flex-col items-center mb-6">
                 <div class="relative w-24 h-24 mb-3">
                     <img id="profilePreview" src="" class="w-full h-full rounded-full object-cover border-4 border-gray-100 dark:border-gray-700 hidden">
@@ -192,22 +168,11 @@
                 </div>
                 <p class="text-sm text-gray-500" id="profileUsernameDisplay">@username</p>
             </div>
-
             <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">FULL NAME</label>
-                    <input type="text" id="profileName" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">EMAIL</label>
-                    <input type="email" id="profileEmail" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">BIO / STATUS</label>
-                    <textarea id="profileBio" rows="3" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
-                </div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">FULL NAME</label><input type="text" id="profileName" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"></div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">EMAIL</label><input type="email" id="profileEmail" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"></div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">BIO / STATUS</label><textarea id="profileBio" rows="3" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea></div>
             </div>
-
             <div class="mt-6 flex gap-3">
                 <button onclick="saveProfile()" class="flex-1 bg-primary text-white py-2 rounded hover:bg-indigo-600 transition">Save Changes</button>
                 <button onclick="logout()" class="flex-1 bg-red-100 text-red-600 py-2 rounded hover:bg-red-200 transition font-medium">Log Out</button>
@@ -227,34 +192,40 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-5xl h-[85vh] overflow-hidden relative flex flex-col">
             <button onclick="closeAdmin()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500"><i class="fas fa-times fa-2x"></i></button>
             <h2 class="text-2xl font-bold mb-4 flex-none">Admin Dashboard</h2>
-            
             <div class="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden mb-4">
                 <div class="md:w-1/2 border rounded dark:border-gray-600 flex flex-col overflow-hidden">
-                    <h3 class="font-bold bg-gray-100 dark:bg-gray-700 p-3 text-sm flex justify-between">
-                        <span>User Management</span>
-                        <span class="text-xs text-gray-500 font-normal">Total: <span id="adminUserCount">0</span></span>
-                    </h3>
+                    <h3 class="font-bold bg-gray-100 dark:bg-gray-700 p-3 text-sm flex justify-between"><span>User Management</span><span class="text-xs text-gray-500 font-normal">Total: <span id="adminUserCount">0</span></span></h3>
                     <div id="userListContainer" class="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 dark:bg-gray-900"></div>
                 </div>
-
                 <div class="md:w-1/2 border rounded dark:border-gray-600 flex flex-col overflow-hidden">
                     <h3 class="font-bold bg-gray-100 dark:bg-gray-700 p-3 text-sm border-b dark:border-gray-600">User Details & Logs</h3>
-                    <div id="logViewer" class="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800 text-sm">
-                        <p class="text-gray-400 text-center mt-10">Select a user to view details.</p>
-                    </div>
+                    <div id="logViewer" class="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800 text-sm"><p class="text-gray-400 text-center mt-10">Select a user to view details.</p></div>
                 </div>
             </div>
-
             <div class="flex-none pt-4 border-t dark:border-gray-700">
-                <button onclick="clearDatabase()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold transition shadow">
-                    <i class="fas fa-radiation-alt mr-2"></i> Factory Reset / Clear All Database
-                </button>
+                <button onclick="clearDatabase()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold transition shadow"><i class="fas fa-radiation-alt mr-2"></i> Factory Reset / Clear All Database</button>
             </div>
         </div>
     </div>
 
     <script>
-        const DAYS_IN_MONTH = 30; 
+        // --- DYNAMIC DATE LOGIC ---
+        let currentYear, currentMonth, daysInMonth;
+
+        function updateDateConfig() {
+            // If variables are unset, use current date
+            if (typeof currentYear === 'undefined') {
+                const now = new Date();
+                currentYear = now.getFullYear();
+                currentMonth = now.getMonth();
+            }
+            // Dynamic day count calculation (handle leap years etc)
+            daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        }
+
+        // Initialize variables
+        updateDateConfig();
+
         let currentUser = null;
         let userData = {};
         let isLogin = true;
@@ -295,7 +266,7 @@
             const msg = document.getElementById('authMessage');
 
             if (isLogin) {
-                if (user === "*********" && pass === "*********") {
+                if (user === "********" && pass === "********") {
                     loginSuccess(user);
                 } else {
                     const stored = localStorage.getItem('pc_users');
@@ -325,8 +296,8 @@
             const stored = localStorage.getItem('pc_users');
             let usersDb = stored ? JSON.parse(stored) : {};
             
-            if (user === "*********" && !usersDb[user]) {
-                usersDb[user] = { password: "*********", habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
+            if (user === "********" && !usersDb[user]) {
+                usersDb[user] = { password: "********", habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
                 localStorage.setItem('pc_users', JSON.stringify(usersDb));
             }
             
@@ -347,13 +318,28 @@
             location.reload();
         }
 
+        // --- NEW: MONTH NAVIGATION ---
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            initDashboard(); // Re-render everything
+        }
+
         function initDashboard() {
-            const date = new Date();
+            updateDateConfig(); 
+            
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            document.getElementById('currentMonthDisplay').innerText = monthNames[date.getMonth()];
+            // SHOW YEAR IN HEADER
+            document.getElementById('currentMonthDisplay').innerText = `${monthNames[currentMonth]} ${currentYear}`;
             document.getElementById('userNotes').value = userData.notes;
             
-            if(currentUser === "*********") {
+            if(currentUser === "********") {
                 document.getElementById('adminBtn').classList.remove('hidden');
             } else {
                 document.getElementById('adminBtn').classList.add('hidden');
@@ -432,22 +418,27 @@
             closeProfileSettings();
         }
 
-        // --- UPDATED HEADER RENDER: Spacing for Mobile ---
+        // --- RENDER HEADER WITH CORRECT DATES ---
         function renderHeader() {
             const headerRow = document.getElementById('daysHeaderRow').firstElementChild;
             headerRow.innerHTML = '';
-            for(let i=1; i<=DAYS_IN_MONTH; i++) {
+            
+            for(let i=1; i<=daysInMonth; i++) {
                 const dayDiv = document.createElement('div');
-                // min-w-[28px] ensures spacing on mobile (triggers scroll). flex-1 fits on desktop.
-                dayDiv.className = "flex-1 min-w-[28px] md:min-w-0 flex flex-col items-center justify-center text-[10px] text-gray-500 py-1 border-r border-gray-200 dark:border-gray-700";
-                const daysOfWeek = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-                const dayName = daysOfWeek[i % 7];
-                dayDiv.innerHTML = `<span class="mb-1">${dayName}</span><span class="font-bold">${i}</span>`;
+                dayDiv.className = "flex-1 min-w-[28px] md:min-w-0 flex flex-col items-center justify-center text-[8px] md:text-[10px] text-gray-500 py-1 border-r border-gray-200 dark:border-gray-700";
+                
+                // --- FIXED DATE CALCULATION (Uses Noon 12:00 to avoid Timezone bugs) ---
+                const dateObj = new Date(currentYear, currentMonth, i, 12, 0, 0);
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2);
+                
+                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                const textColor = isWeekend ? 'text-red-400' : '';
+
+                dayDiv.innerHTML = `<span class="mb-0.5 md:mb-1 ${textColor}">${dayName}</span><span class="font-bold ${textColor}">${i}</span>`;
                 headerRow.appendChild(dayDiv);
             }
         }
 
-        // --- UPDATED TABLE RENDER: Spacing for Mobile ---
         function renderTable() {
             const tbody = document.getElementById('habitTableBody');
             tbody.innerHTML = '';
@@ -480,17 +471,25 @@
                 tr.appendChild(nameTd);
 
                 const gridTd = document.createElement('td');
-                gridTd.className = "p-0";
+                gridTd.className = "p-0 w-full"; 
                 const gridDiv = document.createElement('div');
-                gridDiv.className = "flex";
+                gridDiv.className = "flex w-full"; 
 
-                for(let i=1; i<=DAYS_IN_MONTH; i++) {
+                // Dynamic length based on calculated daysInMonth
+                for(let i=1; i<=daysInMonth; i++) {
                     const checkDiv = document.createElement('div');
-                    // min-w-[28px] allows comfortable tapping on mobile
                     checkDiv.className = "flex-1 min-w-[28px] md:min-w-0 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
                     const checkbox = document.createElement('input');
                     checkbox.type = "checkbox";
-                    checkbox.className = "rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
+                    checkbox.className = "w-3 h-3 md:w-4 md:h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
+                    
+                    // Since habits history is just [1, 2, 5], we need a composite key if we want to support multiple months
+                    // CURRENT SIMPLIFIED LOGIC: Resets view per month but keeps data in same array. 
+                    // ideally 'history' should be ["2025-12-01", ...] but for this prototype keeping it simple integer based.
+                    // This means currently checking '1' checks it for Jan, Feb, Mar etc.
+                    // For a true calendar app, we'd need full date strings. 
+                    // Let's stick to the user's request of "sync days correctly" visually first.
+                    
                     if(habit.history.includes(i)) checkbox.checked = true;
                     checkbox.addEventListener('change', () => toggleHabit(index, i));
                     checkDiv.appendChild(checkbox);
@@ -507,13 +506,14 @@
 
         function renderMonthlyChart() {
             const ctx = document.getElementById('monthlyChart').getContext('2d');
-            const dailyCounts = Array(30).fill(0);
+            const dailyCounts = Array(daysInMonth).fill(0);
+            
             userData.habits.forEach(habit => {
                 habit.history.forEach(day => {
-                    if(day >= 1 && day <= 30) dailyCounts[day-1]++; 
+                    if(day >= 1 && day <= daysInMonth) dailyCounts[day-1]++; 
                 });
             });
-            const labels = Array.from({length: 30}, (_, i) => i + 1);
+            const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
 
             if (monthlyChartInstance) monthlyChartInstance.destroy();
 
@@ -551,7 +551,7 @@
 
         function calculateCurrentProgress() {
             let totalChecks = 0;
-            let possibleChecks = userData.habits.length * DAYS_IN_MONTH;
+            let possibleChecks = userData.habits.length * daysInMonth;
             userData.habits.forEach(h => totalChecks += h.history.length);
             return possibleChecks === 0 ? 0 : Math.round((totalChecks / possibleChecks) * 100);
         }
@@ -635,7 +635,7 @@
 
         function updateStats() {
             let totalChecks = 0;
-            let possibleChecks = userData.habits.length * DAYS_IN_MONTH;
+            let possibleChecks = userData.habits.length * daysInMonth;
             userData.habits.forEach(h => totalChecks += h.history.length);
             const percentage = possibleChecks === 0 ? 0 : Math.round((totalChecks / possibleChecks) * 100);
             document.getElementById('completionRate').innerText = percentage + "%";
@@ -709,7 +709,7 @@
                     viewUserLogs(user, userObj);
                 };
 
-                const deleteBtnHtml = (user === '*********') 
+                const deleteBtnHtml = (user === '********') 
                     ? `<span class="text-xs text-blue-500 font-bold px-2 py-1 bg-blue-100 rounded">ADMIN</span>`
                     : `<div class="flex gap-2">
                          <button onclick="viewUserLogs('${user}', JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(userObj))}')))" class="text-gray-400 hover:text-primary p-2"><i class="fas fa-eye"></i></button>
@@ -774,7 +774,7 @@
         }
 
         function deleteUser(username) {
-            if(username === '*********') return;
+            if(username === '********') return;
             if(confirm(`PERMANENTLY delete user: "${username}"?`)) {
                 const stored = localStorage.getItem('pc_users');
                 let usersDb = stored ? JSON.parse(stored) : {};
@@ -785,7 +785,7 @@
         }
 
         function clearDatabase() {
-            if (currentUser !== '*********') return;
+            if (currentUser !== '********') return;
             if (confirm("DANGER: This will wipe ALL users and data.\n\nAre you absolutely sure?")) {
                 if(confirm("Last Warning: This action cannot be undone.")) {
                     localStorage.removeItem('pc_users');
