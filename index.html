@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Progress Code | Ultimate Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        darkBg: '#1e1e1e',
+                        lightBg: '#f3f4f6',
+                        sheetHeader: '#e5e7eb',
+                        sheetHeaderDark: '#374151',
+                        noteYellow: '#fef9c3', 
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .habit-grid::-webkit-scrollbar { height: 6px; width: 6px; }
+        .habit-grid::-webkit-scrollbar-track { background: transparent; }
+        .habit-grid::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .habit-grid::-webkit-scrollbar-thumb { background: #4b5563; }
+        
+        .drag-over { border: 2px dashed #4F46E5; }
+        .checkbox-custom { accent-color: #4F46E5; width: 1.25rem; height: 1.25rem; }
+
+        tr:hover .delete-btn { opacity: 1; }
+        @media (max-width: 768px) { .delete-btn { opacity: 1; color: #9ca3af; } }
+        .delete-btn { transition: opacity 0.2s, color 0.2s; }
+
+        .notepad-lines {
+            background-image: linear-gradient(#d1d5db 1px, transparent 1px);
+            background-size: 100% 2rem;
+            line-height: 2rem;
+            background-attachment: local;
+        }
+    </style>
+</head>
+<body class="bg-lightBg text-gray-800 dark:bg-darkBg dark:text-gray-200 transition-colors duration-200 font-sans h-[100dvh] flex flex-col overflow-hidden">
+
+    <div id="authSection" class="fixed inset-0 z-50 bg-lightBg dark:bg-darkBg flex items-center justify-center overflow-auto p-4">
+        <div class="w-full max-w-md p-4">
+            <h2 class="text-4xl font-bold text-center mb-8 text-primary">Progress Code</h2>
+            
+            <div class="flex justify-center mb-8 bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
+                <button onclick="toggleAuth('login')" id="tab-login" class="w-1/2 py-2 rounded-md bg-white dark:bg-gray-600 shadow-sm font-semibold transition text-sm md:text-base">Log In</button>
+                <button onclick="toggleAuth('signup')" id="tab-signup" class="w-1/2 py-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 transition text-sm md:text-base">Sign Up</button>
+            </div>
+
+            <form id="authForm" onsubmit="handleAuth(event)">
+                <div class="mb-5">
+                    <label class="block text-sm font-bold mb-2 uppercase tracking-wide text-gray-500 dark:text-gray-400">Username</label>
+                    <input type="text" id="username" class="w-full p-4 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" required placeholder="Enter username">
+                </div>
+                <div class="mb-8">
+                    <label class="block text-sm font-bold mb-2 uppercase tracking-wide text-gray-500 dark:text-gray-400">Password</label>
+                    <input type="password" id="password" class="w-full p-4 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-4 rounded-lg font-bold hover:bg-indigo-600 transition shadow-lg text-lg transform active:scale-95 duration-150">Access Dashboard</button>
+            </form>
+            
+            <p id="authMessage" class="mt-6 text-center text-red-500 text-sm h-5 font-semibold"></p>
+        </div>
+    </div>
+
+    <div id="appSection" class="hidden flex-1 flex flex-col h-full relative">
+        
+        <nav class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex justify-between items-center z-20 flex-none">
+            <div class="flex items-center gap-2 md:gap-4">
+                <h1 class="text-lg md:text-xl font-bold tracking-tight">Focus<span class="hidden md:inline"> Plan</span> <span class="text-[10px] md:text-xs bg-primary text-white px-2 py-1 rounded ml-1">PRO</span></h1>
+            </div>
+            <div class="flex items-center gap-3 md:gap-4">
+                <button onclick="openYearlyOverview()" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition" title="Yearly Overview">
+                    <i class="fas fa-chart-line text-primary text-lg"></i>
+                </button>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition" title="Toggle Theme">
+                    <i class="fas fa-moon dark:hidden text-lg"></i>
+                    <i class="fas fa-sun hidden dark:inline text-yellow-400 text-lg"></i>
+                </button>
+                
+                <div onclick="openProfileSettings()" class="relative group cursor-pointer">
+                    <img id="navProfilePic" src="" class="hidden h-9 w-9 rounded-full object-cover border-2 border-primary">
+                    <div id="navDefaultIcon" class="h-9 w-9 bg-indigo-100 rounded-full flex items-center justify-center text-primary font-bold">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="flex-1 p-2 md:p-6 flex flex-col lg:flex-row gap-4 lg:gap-6 overflow-y-auto lg:overflow-hidden">
+            
+            <div class="flex-none lg:flex-1 flex flex-col min-w-0 lg:h-full gap-4">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex-none">
+                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-1" id="currentMonthDisplay">Month</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Daily Habit Tracker & Scheduler</p>
+                        </div>
+                        <div class="flex justify-between md:justify-start md:gap-8 text-center w-full md:w-auto">
+                            <div>
+                                <p class="text-[10px] text-gray-500 uppercase tracking-wide">Habits</p>
+                                <p class="text-xl font-bold" id="totalHabitsCount">0</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-gray-500 uppercase tracking-wide">Streak</p>
+                                <p class="text-xl font-bold text-orange-500"><i class="fas fa-fire"></i> <span id="currentStreak">0</span></p>
+                            </div>
+                            <div class="w-32 md:w-48">
+                                <div class="flex justify-between text-[10px] mb-1">
+                                    <span>Progress</span>
+                                    <span id="completionRate">0%</span>
+                                </div>
+                                <div class="h-2 md:h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div id="progressBar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0 transition-all duration-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow flex-1 flex flex-col overflow-hidden min-h-[400px]">
+                    <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800 flex-none">
+                        <h3 class="font-semibold text-gray-700 dark:text-gray-300 text-sm">My Habits</h3>
+                        <div class="flex gap-2">
+                            <button id="adminBtn" onclick="adminDashboard()" class="hidden text-[10px] md:text-xs bg-gray-700 text-white px-2 py-1 md:px-3 md:py-1.5 rounded hover:bg-gray-600">Admin</button>
+                            <button onclick="addNewHabit()" class="text-[10px] md:text-xs bg-primary text-white px-3 py-1.5 rounded hover:bg-indigo-600"><i class="fas fa-plus mr-1"></i> Add</button>
+                        </div>
+                    </div>
+                    <div class="overflow-auto habit-grid flex-1 relative w-full">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 z-10 bg-sheetHeader dark:bg-sheetHeaderDark shadow-sm">
+                                <tr>
+                                    <th class="sticky left-0 z-20 bg-sheetHeader dark:bg-sheetHeaderDark p-3 w-40 md:w-72 min-w-[150px] md:min-w-[250px] border-r border-gray-300 dark:border-gray-600 font-semibold text-xs md:text-sm shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Task Name</th>
+                                    <th id="daysHeaderRow" class="p-0"><div class="flex"></div></th>
+                                </tr>
+                            </thead>
+                            <tbody id="habitTableBody" class="text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-none lg:w-80 flex flex-col gap-4 lg:h-full pb-6 lg:pb-0">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 h-48 flex-none flex flex-col">
+                    <h3 class="font-bold text-sm text-gray-700 dark:text-gray-200 mb-2">Daily Consistency</h3>
+                    <div class="flex-1 relative w-full h-full">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow flex-none lg:flex-1 flex flex-col overflow-hidden border-t-4 border-yellow-400 h-64 lg:h-auto">
+                    <div class="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center flex-none">
+                        <h3 class="font-bold text-gray-700 dark:text-gray-200 text-sm"><i class="fas fa-pen-nib mr-2"></i>Quick Notes</h3>
+                        <span id="saveIndicator" class="text-[10px] text-gray-400 uppercase font-semibold">Saved</span>
+                    </div>
+                    <textarea 
+                        id="userNotes" 
+                        oninput="handleNoteInput(this)"
+                        class="flex-1 w-full h-full p-4 resize-none focus:outline-none bg-noteYellow text-gray-800 notepad-lines text-sm"
+                        placeholder="Write down important tasks..."></textarea>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="profileModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md relative shadow-2xl">
+            <button onclick="closeProfileSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"><i class="fas fa-times"></i></button>
+            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Profile</h2>
+            
+            <div class="flex flex-col items-center mb-6">
+                <div class="relative w-24 h-24 mb-3">
+                    <img id="profilePreview" src="" class="w-full h-full rounded-full object-cover border-4 border-gray-100 dark:border-gray-700 hidden">
+                    <div id="profilePlaceholder" class="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-3xl text-gray-400"><i class="fas fa-user"></i></div>
+                    <label for="profileUpload" class="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer hover:bg-indigo-600 shadow"><i class="fas fa-camera text-xs"></i></label>
+                    <input type="file" id="profileUpload" class="hidden" accept="image/*" onchange="handleProfileUpload(this)">
+                </div>
+                <p class="text-sm text-gray-500" id="profileUsernameDisplay">@username</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">FULL NAME</label>
+                    <input type="text" id="profileName" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">EMAIL</label>
+                    <input type="email" id="profileEmail" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">BIO / STATUS</label>
+                    <textarea id="profileBio" rows="3" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button onclick="saveProfile()" class="flex-1 bg-primary text-white py-2 rounded hover:bg-indigo-600 transition">Save Changes</button>
+                <button onclick="logout()" class="flex-1 bg-red-100 text-red-600 py-2 rounded hover:bg-red-200 transition font-medium">Log Out</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="yearModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-4xl relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeYearlyOverview()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"><i class="fas fa-times fa-2x"></i></button>
+            <h2 class="text-2xl font-bold mb-1 text-gray-800 dark:text-gray-100">Yearly Productivity</h2>
+            <div class="h-60 md:h-80 w-full bg-gray-50 dark:bg-gray-900 rounded-lg p-2 border border-gray-200 dark:border-gray-700"><canvas id="yearlyChart"></canvas></div>
+        </div>
+    </div>
+
+    <div id="adminModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-5xl h-[85vh] overflow-hidden relative flex flex-col">
+            <button onclick="closeAdmin()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500"><i class="fas fa-times fa-2x"></i></button>
+            <h2 class="text-2xl font-bold mb-4 flex-none">Admin Dashboard</h2>
+            
+            <div class="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden mb-4">
+                <div class="md:w-1/2 border rounded dark:border-gray-600 flex flex-col overflow-hidden">
+                    <h3 class="font-bold bg-gray-100 dark:bg-gray-700 p-3 text-sm flex justify-between">
+                        <span>User Management</span>
+                        <span class="text-xs text-gray-500 font-normal">Total: <span id="adminUserCount">0</span></span>
+                    </h3>
+                    <div id="userListContainer" class="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 dark:bg-gray-900"></div>
+                </div>
+
+                <div class="md:w-1/2 border rounded dark:border-gray-600 flex flex-col overflow-hidden">
+                    <h3 class="font-bold bg-gray-100 dark:bg-gray-700 p-3 text-sm border-b dark:border-gray-600">User Details & Logs</h3>
+                    <div id="logViewer" class="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800 text-sm">
+                        <p class="text-gray-400 text-center mt-10">Select a user to view details.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-none pt-4 border-t dark:border-gray-700">
+                <button onclick="clearDatabase()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold transition shadow">
+                    <i class="fas fa-radiation-alt mr-2"></i> Factory Reset / Clear All Database
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DAYS_IN_MONTH = 30; 
+        let currentUser = null;
+        let userData = {};
+        let isLogin = true;
+        let yearlyChartInstance = null;
+        let monthlyChartInstance = null;
+
+        const defaultHabits = [
+            { id: 1, name: "Wake up at 05:00 ⏰", type: "time", history: [] },
+            { id: 2, name: "Gym 💪", type: "physical", history: [] },
+            { id: 3, name: "Reading / Learning 📖", type: "mental", history: [] },
+            { id: 4, name: "Day Planning 📝", type: "productivity", history: [] },
+            { id: 5, name: "Budget Tracking 💰", type: "finance", history: [] },
+            { id: 6, name: "Project Work 🎯", type: "work", history: [] },
+            { id: 7, name: "No Alcohol 🚫", type: "health", history: [] },
+            { id: 8, name: "Social Media Detox 📵", type: "mental", history: [] }
+        ];
+
+        function logAction(action) {
+            if (!userData.logs) userData.logs = [];
+            const now = new Date();
+            const timestamp = now.toLocaleString();
+            userData.logs.unshift({ action: action, time: timestamp });
+            if(userData.logs.length > 100) userData.logs.pop();
+            saveData();
+        }
+
+        // --- AUTH ---
+        function toggleAuth(type) {
+            isLogin = type === 'login';
+            document.getElementById('tab-login').className = isLogin ? "w-1/2 py-2 rounded-md bg-white dark:bg-gray-600 shadow-sm font-semibold transition text-sm md:text-base" : "w-1/2 py-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 transition text-sm md:text-base";
+            document.getElementById('tab-signup').className = !isLogin ? "w-1/2 py-2 rounded-md bg-white dark:bg-gray-600 shadow-sm font-semibold transition text-sm md:text-base" : "w-1/2 py-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 transition text-sm md:text-base";
+            document.getElementById('authMessage').innerText = "";
+        }
+
+        function handleAuth(e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('authMessage');
+
+            if (isLogin) {
+                if (user === "**********" && pass === "**********") {
+                    loginSuccess(user);
+                } else {
+                    const stored = localStorage.getItem('pc_users');
+                    const usersDb = stored ? JSON.parse(stored) : {};
+                    if (usersDb[user] && usersDb[user].password === pass) {
+                        loginSuccess(user);
+                    } else {
+                        msg.innerText = "Invalid Username or Password";
+                    }
+                }
+            } else {
+                const stored = localStorage.getItem('pc_users');
+                const usersDb = stored ? JSON.parse(stored) : {};
+                if (usersDb[user]) {
+                    msg.innerText = "User already exists";
+                } else {
+                    usersDb[user] = { password: pass, habits: defaultHabits, notes: "", logs: [], profile: {} };
+                    localStorage.setItem('pc_users', JSON.stringify(usersDb));
+                    loginSuccess(user);
+                    logAction("User Registered");
+                }
+            }
+        }
+
+        function loginSuccess(user) {
+            currentUser = user;
+            const stored = localStorage.getItem('pc_users');
+            let usersDb = stored ? JSON.parse(stored) : {};
+            
+            if (user === "**********" && !usersDb[user]) {
+                usersDb[user] = { password: "**********, habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
+                localStorage.setItem('pc_users', JSON.stringify(usersDb));
+            }
+            
+            userData = usersDb[user];
+            if(typeof userData.notes === 'undefined') userData.notes = "";
+            if(typeof userData.logs === 'undefined') userData.logs = [];
+            if(typeof userData.profile === 'undefined') userData.profile = {};
+
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            
+            logAction("User Logged In");
+            initDashboard();
+        }
+
+        function logout() {
+            logAction("User Logged Out"); 
+            location.reload();
+        }
+
+        // --- DASHBOARD & PROFILE UI ---
+        function initDashboard() {
+            const date = new Date();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('currentMonthDisplay').innerText = monthNames[date.getMonth()];
+            document.getElementById('userNotes').value = userData.notes;
+            
+            if(currentUser === "**********") {
+                document.getElementById('adminBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('adminBtn').classList.add('hidden');
+            }
+
+            updateNavAvatar();
+            renderHeader();
+            renderTable();
+            updateStats();
+        }
+
+        function updateNavAvatar() {
+            const navImg = document.getElementById('navProfilePic');
+            const navDefault = document.getElementById('navDefaultIcon');
+            if(userData.profile && userData.profile.image) {
+                navImg.src = userData.profile.image;
+                navImg.classList.remove('hidden');
+                navDefault.classList.add('hidden');
+            } else {
+                navImg.classList.add('hidden');
+                navDefault.classList.remove('hidden');
+            }
+        }
+
+        // --- PROFILE SETTINGS ---
+        function openProfileSettings() {
+            document.getElementById('profileUsernameDisplay').innerText = "@" + currentUser;
+            document.getElementById('profileName').value = userData.profile.name || "";
+            document.getElementById('profileEmail').value = userData.profile.email || "";
+            document.getElementById('profileBio').value = userData.profile.bio || "";
+            
+            const prev = document.getElementById('profilePreview');
+            const place = document.getElementById('profilePlaceholder');
+            
+            if(userData.profile.image) {
+                prev.src = userData.profile.image;
+                prev.classList.remove('hidden');
+                place.classList.add('hidden');
+            } else {
+                prev.classList.add('hidden');
+                place.classList.remove('hidden');
+            }
+            
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+
+        function closeProfileSettings() {
+            document.getElementById('profileModal').classList.add('hidden');
+        }
+
+        function handleProfileUpload(input) {
+            const file = input.files[0];
+            if(!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Info = e.target.result;
+                document.getElementById('profilePreview').src = base64Info;
+                document.getElementById('profilePreview').classList.remove('hidden');
+                document.getElementById('profilePlaceholder').classList.add('hidden');
+                userData.profile.tempImage = base64Info; 
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function saveProfile() {
+            if(!userData.profile) userData.profile = {};
+            userData.profile.name = document.getElementById('profileName').value;
+            userData.profile.email = document.getElementById('profileEmail').value;
+            userData.profile.bio = document.getElementById('profileBio').value;
+            if(userData.profile.tempImage) {
+                userData.profile.image = userData.profile.tempImage;
+                delete userData.profile.tempImage;
+            }
+            saveData();
+            updateNavAvatar();
+            logAction("Updated Profile Details");
+            closeProfileSettings();
+        }
+
+        function renderHeader() {
+            const headerRow = document.getElementById('daysHeaderRow').firstElementChild;
+            headerRow.innerHTML = '';
+            for(let i=1; i<=DAYS_IN_MONTH; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = "w-8 flex flex-col items-center justify-center text-xs text-gray-500 py-2 border-r border-gray-200 dark:border-gray-700";
+                const daysOfWeek = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+                const dayName = daysOfWeek[i % 7];
+                dayDiv.innerHTML = `<span class="mb-1">${dayName}</span><span class="font-bold">${i}</span>`;
+                headerRow.appendChild(dayDiv);
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('habitTableBody');
+            tbody.innerHTML = '';
+
+            userData.habits.forEach((habit, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700 group";
+                tr.draggable = true;
+                tr.dataset.index = index;
+
+                tr.addEventListener('dragstart', dragStart);
+                tr.addEventListener('dragover', dragOver);
+                tr.addEventListener('drop', drop);
+                tr.addEventListener('dragleave', dragLeave);
+
+                const nameTd = document.createElement('td');
+                nameTd.className = "p-3 border-r border-gray-200 dark:border-gray-600 sticky left-0 z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]";
+                
+                nameTd.innerHTML = `
+                    <div class="flex items-center justify-between gap-1 md:gap-2">
+                        <div class="flex items-center gap-1 md:gap-2 cursor-move overflow-hidden">
+                            <i class="fas fa-grip-vertical text-gray-300 hidden md:inline"></i>
+                            <span class="font-medium truncate text-xs md:text-sm">${habit.name}</span>
+                        </div>
+                        <button onclick="deleteHabit(${index})" class="delete-btn text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition flex-shrink-0" title="Delete Habit">
+                            <i class="fas fa-trash-alt text-xs md:text-sm"></i>
+                        </button>
+                    </div>
+                `;
+                tr.appendChild(nameTd);
+
+                const gridTd = document.createElement('td');
+                gridTd.className = "p-0";
+                const gridDiv = document.createElement('div');
+                gridDiv.className = "flex";
+
+                for(let i=1; i<=DAYS_IN_MONTH; i++) {
+                    const checkDiv = document.createElement('div');
+                    checkDiv.className = "w-8 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
+                    const checkbox = document.createElement('input');
+                    checkbox.type = "checkbox";
+                    checkbox.className = "w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
+                    if(habit.history.includes(i)) checkbox.checked = true;
+                    checkbox.addEventListener('change', () => toggleHabit(index, i));
+                    checkDiv.appendChild(checkbox);
+                    gridDiv.appendChild(checkDiv);
+                }
+                
+                gridTd.appendChild(gridDiv);
+                tr.appendChild(gridTd);
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('totalHabitsCount').innerText = userData.habits.length;
+        }
+
+        function renderMonthlyChart() {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            const dailyCounts = Array(30).fill(0);
+            userData.habits.forEach(habit => {
+                habit.history.forEach(day => {
+                    if(day >= 1 && day <= 30) dailyCounts[day-1]++; 
+                });
+            });
+            const labels = Array.from({length: 30}, (_, i) => i + 1);
+
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+
+            monthlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Habits',
+                        data: dailyCounts,
+                        backgroundColor: '#4F46E5',
+                        borderRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: userData.habits.length, 
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { display: false } 
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function openYearlyOverview() {
+            document.getElementById('yearModal').classList.remove('hidden');
+            renderChart();
+        }
+
+        function closeYearlyOverview() {
+            document.getElementById('yearModal').classList.add('hidden');
+        }
+
+        function calculateCurrentProgress() {
+            let totalChecks = 0;
+            let possibleChecks = userData.habits.length * DAYS_IN_MONTH;
+            userData.habits.forEach(h => totalChecks += h.history.length);
+            return possibleChecks === 0 ? 0 : Math.round((totalChecks / possibleChecks) * 100);
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            const currentScore = calculateCurrentProgress();
+            const dataPoints = [45, 52, 49, 60, 55, 70, 68, 85, 72, 65, currentScore, 75];
+
+            if (yearlyChartInstance) {
+                yearlyChartInstance.destroy();
+            }
+
+            yearlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Productivity (%)',
+                        data: dataPoints,
+                        borderColor: '#4F46E5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#4F46E5',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(200, 200, 200, 0.1)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        let saveTimeout;
+        function handleNoteInput(textarea) {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.innerText = "Saving...";
+            indicator.classList.add('text-primary');
+            indicator.classList.remove('text-gray-400');
+            userData.notes = textarea.value;
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                logAction("Updated Notepad");
+                saveData();
+                indicator.innerText = "Saved";
+                indicator.classList.remove('text-primary');
+                indicator.classList.add('text-gray-400');
+            }, 1000);
+        }
+
+        function deleteHabit(index) {
+            const name = userData.habits[index].name;
+            if (confirm(`Delete "${name}"?`)) {
+                logAction(`Deleted habit: "${name}"`);
+                userData.habits.splice(index, 1);
+                saveData();
+                renderTable();
+                updateStats();
+            }
+        }
+
+        function toggleHabit(habitIndex, day) {
+            const habit = userData.habits[habitIndex];
+            if (habit.history.includes(day)) {
+                habit.history = habit.history.filter(d => d !== day);
+                logAction(`Unchecked habit: "${habit.name}" (Day ${day})`);
+            } else {
+                habit.history.push(day);
+                logAction(`Checked habit: "${habit.name}" (Day ${day})`);
+            }
+            saveData();
+            updateStats();
+        }
+
+        function updateStats() {
+            let totalChecks = 0;
+            let possibleChecks = userData.habits.length * DAYS_IN_MONTH;
+            userData.habits.forEach(h => totalChecks += h.history.length);
+            const percentage = possibleChecks === 0 ? 0 : Math.round((totalChecks / possibleChecks) * 100);
+            document.getElementById('completionRate').innerText = percentage + "%";
+            document.getElementById('progressBar').style.width = percentage + "%";
+            let streak = 0;
+            if (totalChecks > 0) streak = Math.floor(Math.random() * 5) + 1;
+            document.getElementById('currentStreak').innerText = streak;
+            renderMonthlyChart();
+        }
+
+        function saveData() {
+            const stored = localStorage.getItem('pc_users');
+            let usersDb = JSON.parse(stored);
+            usersDb[currentUser] = userData;
+            localStorage.setItem('pc_users', JSON.stringify(usersDb));
+        }
+
+        let dragSrcEl = null;
+        function dragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+            this.classList.add('opacity-50');
+        }
+        function dragOver(e) { e.preventDefault(); this.classList.add('drag-over'); e.dataTransfer.dropEffect = 'move'; return false; }
+        function dragLeave(e) { this.classList.remove('drag-over'); }
+        function drop(e) {
+            e.stopPropagation(); this.classList.remove('drag-over');
+            if (dragSrcEl !== this) {
+                const srcIdx = parseInt(dragSrcEl.dataset.index);
+                const targetIdx = parseInt(this.dataset.index);
+                const item = userData.habits.splice(srcIdx, 1)[0];
+                userData.habits.splice(targetIdx, 0, item);
+                saveData();
+                renderTable();
+            }
+            dragSrcEl.classList.remove('opacity-50');
+            return false;
+        }
+
+        function addNewHabit() {
+            const name = prompt("Enter new habit name:");
+            if (name) {
+                logAction(`Created habit: "${name}"`);
+                userData.habits.push({ id: Date.now(), name: name, type: "general", history: [] });
+                saveData();
+                renderTable();
+                updateStats();
+            }
+        }
+
+        function toggleDarkMode() { document.documentElement.classList.toggle('dark'); }
+
+        // --- ADMIN DASHBOARD ---
+        function adminDashboard() {
+            const db = JSON.parse(localStorage.getItem('pc_users')) || {};
+            const container = document.getElementById('userListContainer');
+            container.innerHTML = ''; 
+
+            Object.keys(db).forEach(user => {
+                const userObj = db[user];
+                const habitCount = userObj.habits ? userObj.habits.length : 0;
+                // Get profile img or default
+                const profileImg = (userObj.profile && userObj.profile.image) 
+                    ? `<img src="${userObj.profile.image}" class="w-8 h-8 rounded-full border mr-2 object-cover">`
+                    : `<div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 text-xs text-gray-500"><i class="fas fa-user"></i></div>`;
+
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-3 bg-white dark:bg-gray-800 border rounded dark:border-gray-700 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition group";
+                
+                div.onclick = (e) => {
+                    if(e.target.closest('.delete-btn-admin')) return;
+                    viewUserLogs(user, userObj);
+                };
+
+                const deleteBtnHtml = (user === '**********') 
+                    ? `<span class="text-xs text-blue-500 font-bold px-2 py-1 bg-blue-100 rounded">ADMIN</span>`
+                    : `<div class="flex gap-2">
+                         <button onclick="viewUserLogs('${user}', JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(userObj))}')))" class="text-gray-400 hover:text-primary p-2"><i class="fas fa-eye"></i></button>
+                         <button onclick="deleteUser('${user}')" class="delete-btn-admin text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash-alt"></i></button>
+                       </div>`;
+
+                div.innerHTML = `
+                    <div class="flex items-center overflow-hidden mr-2">
+                        ${profileImg}
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-sm truncate">${user}</span>
+                            <span class="text-[10px] text-gray-500">${habitCount} habits</span>
+                        </div>
+                    </div>
+                    ${deleteBtnHtml}
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('adminUserCount').innerText = Object.keys(db).length;
+            document.getElementById('logViewer').innerHTML = '<p class="text-gray-400 text-center mt-10">Select a user to view details.</p>';
+            document.getElementById('adminModal').classList.remove('hidden');
+        }
+
+        function viewUserLogs(username, userObj) {
+            const viewer = document.getElementById('logViewer');
+            const logs = userObj.logs || [];
+            const profile = userObj.profile || {};
+            
+            // Build Profile Header
+            const avatar = profile.image ? `<img src="${profile.image}" class="w-16 h-16 rounded-full border-2 border-primary object-cover">` : `<div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-400"><i class="fas fa-user"></i></div>`;
+            
+            let html = `
+                <div class="flex items-center gap-4 mb-6 border-b dark:border-gray-700 pb-4">
+                    ${avatar}
+                    <div>
+                        <h4 class="font-bold text-lg text-primary">${username}</h4>
+                        <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Name: <span class="text-gray-700 dark:text-gray-300 font-normal normal-case">${profile.name || "N/A"}</span></p>
+                        <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Email: <span class="text-gray-700 dark:text-gray-300 font-normal normal-case">${profile.email || "N/A"}</span></p>
+                    </div>
+                </div>
+            `;
+            
+            if(profile.bio) {
+                html += `<div class="mb-4 bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm italic text-gray-600 dark:text-gray-400">"${profile.bio}"</div>`;
+            }
+
+            if(logs.length === 0) {
+                html += `<p class="text-gray-400 text-sm">No activity recorded.</p>`;
+            } else {
+                html += `<h5 class="font-bold text-xs uppercase text-gray-400 mb-2">Activity Log</h5><ul class="space-y-3">`;
+                logs.forEach(log => {
+                    html += `
+                        <li class="flex flex-col border-l-2 border-gray-300 dark:border-gray-600 pl-3 py-1">
+                            <span class="text-xs text-gray-400 font-mono">${log.time}</span>
+                            <span class="text-sm dark:text-gray-200">${log.action}</span>
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            }
+            viewer.innerHTML = html;
+        }
+
+        function deleteUser(username) {
+            if(username === '**********') return;
+            if(confirm(`PERMANENTLY delete user: "${username}"?`)) {
+                const stored = localStorage.getItem('pc_users');
+                let usersDb = stored ? JSON.parse(stored) : {};
+                delete usersDb[username];
+                localStorage.setItem('pc_users', JSON.stringify(usersDb));
+                adminDashboard();
+            }
+        }
+
+        function clearDatabase() {
+            if (currentUser !== '**********') return;
+            if (confirm("DANGER: This will wipe ALL users and data.\n\nAre you absolutely sure?")) {
+                if(confirm("Last Warning: This action cannot be undone.")) {
+                    localStorage.removeItem('pc_users');
+                    alert("System Reset Complete.");
+                    location.reload();
+                }
+            }
+        }
+
+        function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
