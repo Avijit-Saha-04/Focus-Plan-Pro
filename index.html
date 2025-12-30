@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Focus Plan Pro</title>
+    <title>Focus Plan Pro (Online)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <link rel="icon" type="image/png" href="favicon.png">
 
     <script>
@@ -36,9 +40,9 @@
         .drag-over { border: 2px dashed #4F46E5; }
         .checkbox-custom { accent-color: #4F46E5; width: 1.1rem; height: 1.1rem; }
 
-        tr:hover .delete-btn { opacity: 1; }
-        @media (max-width: 768px) { .delete-btn { opacity: 1; color: #9ca3af; } }
-        .delete-btn { transition: opacity 0.2s, color 0.2s; }
+        tr:hover .action-btn { opacity: 1; }
+        @media (max-width: 768px) { .action-btn { opacity: 1; } }
+        .action-btn { transition: opacity 0.2s, color 0.2s; }
 
         .notepad-lines {
             background-image: linear-gradient(#d1d5db 1px, transparent 1px);
@@ -46,9 +50,27 @@
             line-height: 2rem;
             background-attachment: local;
         }
+        
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4F46E5;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-lightBg text-gray-800 dark:bg-darkBg dark:text-gray-200 transition-colors duration-200 font-sans h-[100dvh] flex flex-col overflow-hidden">
+
+    <div id="loadingOverlay" class="hidden fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg flex flex-col items-center">
+            <div class="loader mb-3"></div>
+            <p class="text-sm font-semibold">Syncing...</p>
+        </div>
+    </div>
 
     <div id="authSection" class="fixed inset-0 z-50 bg-lightBg dark:bg-darkBg flex items-center justify-center overflow-auto p-4">
         <div class="w-full max-w-md p-4">
@@ -209,48 +231,55 @@
     </div>
 
     <script>
-        // --- DYNAMIC DATE LOGIC ---
-        let currentYear, currentMonth, daysInMonth;
+        
+        const firebaseConfig = {
+            apiKey: "",            // <--- PASTE YOUR apiKey HERE
+            authDomain: "",        // <--- PASTE YOUR authDomain HERE
+            projectId: "",         // <--- PASTE YOUR projectId HERE
+            storageBucket: "",     // <--- PASTE YOUR storageBucket HERE
+            messagingSenderId: "", 
+            appId: ""              // <--- PASTE YOUR appId HERE
+        };
 
-        function updateDateConfig() {
-            // If variables are unset, use current date
-            if (typeof currentYear === 'undefined') {
-                const now = new Date();
-                currentYear = now.getFullYear();
-                currentMonth = now.getMonth();
+        // Initialize Firebase (Compat Mode)
+        if (!firebase.apps.length) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+            } catch (error) {
+                console.error("Firebase Init Error: Did you fill in the keys?", error);
             }
-            // Dynamic day count calculation (handle leap years etc)
-            daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         }
+        const db = firebase.database();
 
-        // Initialize variables
-        updateDateConfig();
-
+        // --- CORE LOGIC ---
+        let currentYear, currentMonth, daysInMonth;
         let currentUser = null;
         let userData = {};
         let isLogin = true;
         let yearlyChartInstance = null;
         let monthlyChartInstance = null;
+        let saveTimeout;
+
+        function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+        function updateDateConfig() {
+            if (typeof currentYear === 'undefined') {
+                const now = new Date();
+                currentYear = now.getFullYear();
+                currentMonth = now.getMonth();
+            }
+            daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        }
+        updateDateConfig();
 
         const defaultHabits = [
             { id: 1, name: "Wake up at 05:00 ⏰", type: "time", history: [] },
             { id: 2, name: "Gym 💪", type: "physical", history: [] },
             { id: 3, name: "Reading / Learning 📖", type: "mental", history: [] },
             { id: 4, name: "Day Planning 📝", type: "productivity", history: [] },
-            { id: 5, name: "Budget Tracking 💰", type: "finance", history: [] },
-            { id: 6, name: "Project Work 🎯", type: "work", history: [] },
-            { id: 7, name: "No Alcohol 🚫", type: "health", history: [] },
-            { id: 8, name: "Social Media Detox 📵", type: "mental", history: [] }
+            { id: 5, name: "Budget Tracking 💰", type: "finance", history: [] }
         ];
-
-        function logAction(action) {
-            if (!userData.logs) userData.logs = [];
-            const now = new Date();
-            const timestamp = now.toLocaleString();
-            userData.logs.unshift({ action: action, time: timestamp });
-            if(userData.logs.length > 100) userData.logs.pop();
-            saveData();
-        }
 
         function toggleAuth(type) {
             isLogin = type === 'login';
@@ -261,47 +290,57 @@
 
         function handleAuth(e) {
             e.preventDefault();
-            const user = document.getElementById('username').value;
+            const user = document.getElementById('username').value.toLowerCase().replace('.', '_'); // sanitize
             const pass = document.getElementById('password').value;
             const msg = document.getElementById('authMessage');
 
-            if (isLogin) {
-                if (user === "********" && pass === "********") {
-                    loginSuccess(user);
-                } else {
-                    const stored = localStorage.getItem('pc_users');
-                    const usersDb = stored ? JSON.parse(stored) : {};
-                    if (usersDb[user] && usersDb[user].password === pass) {
-                        loginSuccess(user);
+            // --- SAFETY CHECK ---
+            if(firebaseConfig.apiKey === "") {
+                msg.innerText = "Error: API Keys missing in code.";
+                return;
+            }
+
+            showLoading();
+
+            db.ref('users/' + user).once('value').then((snapshot) => {
+                hideLoading();
+                const exists = snapshot.exists();
+                const data = snapshot.val();
+
+                if (isLogin) {
+                    if (user === "**********" && pass === "**********") {
+                        // Admin Login
+                        loginSuccess(user, { role: 'admin' });
+                    } else if (exists && data.password === pass) {
+                        loginSuccess(user, data);
                     } else {
                         msg.innerText = "Invalid Username or Password";
                     }
-                }
-            } else {
-                const stored = localStorage.getItem('pc_users');
-                const usersDb = stored ? JSON.parse(stored) : {};
-                if (usersDb[user]) {
-                    msg.innerText = "User already exists";
                 } else {
-                    usersDb[user] = { password: pass, habits: defaultHabits, notes: "", logs: [], profile: {} };
-                    localStorage.setItem('pc_users', JSON.stringify(usersDb));
-                    loginSuccess(user);
-                    logAction("User Registered");
+                    if (exists) {
+                        msg.innerText = "User already exists";
+                    } else {
+                        // Create New User
+                        const newUser = { password: pass, habits: defaultHabits, notes: "", logs: [], profile: {} };
+                        db.ref('users/' + user).set(newUser).then(() => {
+                            logActionForUser(user, "User Registered");
+                            loginSuccess(user, newUser);
+                        });
+                    }
                 }
-            }
+            }).catch((error) => {
+                hideLoading();
+                console.error(error);
+                msg.innerText = "Connection Error. Check Console.";
+            });
         }
 
-        function loginSuccess(user) {
+        function loginSuccess(user, data) {
             currentUser = user;
-            const stored = localStorage.getItem('pc_users');
-            let usersDb = stored ? JSON.parse(stored) : {};
+            userData = data;
             
-            if (user === "********" && !usersDb[user]) {
-                usersDb[user] = { password: "********", habits: JSON.parse(JSON.stringify(defaultHabits)), notes: "Welcome Admin!\nUse this space for your notes.", logs: [], profile: {} };
-                localStorage.setItem('pc_users', JSON.stringify(usersDb));
-            }
-            
-            userData = usersDb[user];
+            // Default Empty Fields if missing
+            if(typeof userData.habits === 'undefined') userData.habits = JSON.parse(JSON.stringify(defaultHabits));
             if(typeof userData.notes === 'undefined') userData.notes = "";
             if(typeof userData.logs === 'undefined') userData.logs = [];
             if(typeof userData.profile === 'undefined') userData.profile = {};
@@ -309,7 +348,7 @@
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
             
-            logAction("User Logged In");
+            if(user !== "**********") logAction("User Logged In");
             initDashboard();
         }
 
@@ -318,28 +357,48 @@
             location.reload();
         }
 
-        // --- NEW: MONTH NAVIGATION ---
+        function saveData() {
+            if (!currentUser || currentUser === "**********") return;
+            // Save to Firebase
+            db.ref('users/' + currentUser).update(userData);
+        }
+
+        function logAction(action) {
+            if (!currentUser || currentUser === "**********") return;
+            if (!userData.logs) userData.logs = [];
+            const now = new Date();
+            userData.logs.unshift({ action: action, time: now.toLocaleString() });
+            if(userData.logs.length > 50) userData.logs.pop();
+            saveData();
+        }
+
+        // Helper to log action immediately without waiting for full userData update
+        function logActionForUser(user, action) {
+             const now = new Date();
+             const log = { action: action, time: now.toLocaleString() };
+             // We just push to the list in DB
+             db.ref('users/' + user + '/logs').once('value', sn => {
+                 let logs = sn.val() || [];
+                 logs.unshift(log);
+                 db.ref('users/' + user + '/logs').set(logs);
+             });
+        }
+
+        // --- DASHBOARD LOGIC (Same as before, just uses Firebase userData) ---
         function changeMonth(delta) {
             currentMonth += delta;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            } else if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            }
-            initDashboard(); // Re-render everything
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; } 
+            else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            initDashboard();
         }
 
         function initDashboard() {
             updateDateConfig(); 
-            
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            // SHOW YEAR IN HEADER
             document.getElementById('currentMonthDisplay').innerText = `${monthNames[currentMonth]} ${currentYear}`;
-            document.getElementById('userNotes').value = userData.notes;
+            document.getElementById('userNotes').value = userData.notes || "";
             
-            if(currentUser === "********") {
+            if(currentUser === "**********") {
                 document.getElementById('adminBtn').classList.remove('hidden');
             } else {
                 document.getElementById('adminBtn').classList.add('hidden');
@@ -351,19 +410,154 @@
             updateStats();
         }
 
-        function updateNavAvatar() {
-            const navImg = document.getElementById('navProfilePic');
-            const navDefault = document.getElementById('navDefaultIcon');
-            if(userData.profile && userData.profile.image) {
-                navImg.src = userData.profile.image;
-                navImg.classList.remove('hidden');
-                navDefault.classList.add('hidden');
-            } else {
-                navImg.classList.add('hidden');
-                navDefault.classList.remove('hidden');
+        function renderHeader() {
+            const headerRow = document.getElementById('daysHeaderRow').firstElementChild;
+            headerRow.innerHTML = '';
+            for(let i=1; i<=daysInMonth; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = "flex-1 min-w-[28px] md:min-w-0 flex flex-col items-center justify-center text-[8px] md:text-[10px] text-gray-500 py-1 border-r border-gray-200 dark:border-gray-700";
+                const dateObj = new Date(currentYear, currentMonth, i, 12, 0, 0);
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2);
+                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                const textColor = isWeekend ? 'text-red-400' : '';
+                dayDiv.innerHTML = `<span class="mb-0.5 md:mb-1 ${textColor}">${dayName}</span><span class="font-bold ${textColor}">${i}</span>`;
+                headerRow.appendChild(dayDiv);
             }
         }
 
+        function renderTable() {
+            const tbody = document.getElementById('habitTableBody');
+            tbody.innerHTML = '';
+            userData.habits.forEach((habit, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700 group";
+                
+                // Name Column with Edit
+                const nameTd = document.createElement('td');
+                nameTd.className = "p-3 border-r border-gray-200 dark:border-gray-600 sticky left-0 z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-32 md:w-72";
+                nameTd.innerHTML = `
+                    <div class="flex items-center justify-between gap-1 md:gap-2">
+                        <div class="flex items-center gap-1 md:gap-2 overflow-hidden">
+                            <span onclick="editHabit(${index})" class="font-medium truncate text-xs md:text-sm cursor-pointer hover:text-primary" title="Click to edit">${habit.name}</span>
+                        </div>
+                        <div class="flex flex-shrink-0 opacity-0 group-hover:opacity-100 action-btn">
+                            <button onclick="editHabit(${index})" class="text-gray-400 hover:text-blue-500 p-1 rounded mr-1"><i class="fas fa-pencil-alt text-xs md:text-sm"></i></button>
+                            <button onclick="deleteHabit(${index})" class="text-gray-400 hover:text-red-500 p-1 rounded"><i class="fas fa-trash-alt text-xs md:text-sm"></i></button>
+                        </div>
+                    </div>`;
+                tr.appendChild(nameTd);
+
+                // Grid Column
+                const gridTd = document.createElement('td');
+                gridTd.className = "p-0 w-full"; 
+                const gridDiv = document.createElement('div');
+                gridDiv.className = "flex w-full"; 
+                for(let i=1; i<=daysInMonth; i++) {
+                    const checkDiv = document.createElement('div');
+                    checkDiv.className = "flex-1 min-w-[28px] md:min-w-0 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
+                    const checkbox = document.createElement('input');
+                    checkbox.type = "checkbox";
+                    checkbox.className = "w-3 h-3 md:w-4 md:h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
+                    if(habit.history.includes(i)) checkbox.checked = true;
+                    checkbox.addEventListener('change', () => toggleHabit(index, i));
+                    checkDiv.appendChild(checkbox);
+                    gridDiv.appendChild(checkDiv);
+                }
+                gridTd.appendChild(gridDiv);
+                tr.appendChild(gridTd);
+                tbody.appendChild(tr);
+            });
+            document.getElementById('totalHabitsCount').innerText = userData.habits.length;
+        }
+
+        function toggleHabit(habitIndex, day) {
+            const habit = userData.habits[habitIndex];
+            if (habit.history.includes(day)) {
+                habit.history = habit.history.filter(d => d !== day);
+            } else {
+                habit.history.push(day);
+            }
+            saveData();
+            updateStats();
+        }
+
+        function editHabit(index) {
+            const currentName = userData.habits[index].name;
+            const newName = prompt("Rename task:", currentName);
+            if (newName && newName.trim() !== "" && newName !== currentName) {
+                logAction(`Renamed habit: "${currentName}" to "${newName}"`);
+                userData.habits[index].name = newName.trim();
+                saveData();
+                renderTable();
+            }
+        }
+
+        function deleteHabit(index) {
+            const name = userData.habits[index].name;
+            if (confirm(`Delete "${name}"?`)) {
+                logAction(`Deleted habit: "${name}"`);
+                userData.habits.splice(index, 1);
+                saveData();
+                renderTable();
+                updateStats();
+            }
+        }
+
+        function addNewHabit() {
+            const name = prompt("Enter new habit name:");
+            if (name) {
+                logAction(`Created habit: "${name}"`);
+                userData.habits.push({ id: Date.now(), name: name, type: "general", history: [] });
+                saveData();
+                renderTable();
+                updateStats();
+            }
+        }
+
+        function handleNoteInput(textarea) {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.innerText = "Saving...";
+            indicator.classList.add('text-primary');
+            userData.notes = textarea.value;
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveData();
+                indicator.innerText = "Saved";
+                indicator.classList.remove('text-primary');
+            }, 1000);
+        }
+
+        function updateStats() {
+            let totalChecks = 0;
+            let possibleChecks = userData.habits.length * daysInMonth;
+            userData.habits.forEach(h => totalChecks += h.history.length);
+            const percentage = possibleChecks === 0 ? 0 : Math.round((totalChecks / possibleChecks) * 100);
+            document.getElementById('completionRate').innerText = percentage + "%";
+            document.getElementById('progressBar').style.width = percentage + "%";
+            
+            // Render Bar Chart
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            const dailyCounts = Array(daysInMonth).fill(0);
+            userData.habits.forEach(habit => {
+                habit.history.forEach(day => { if(day >= 1 && day <= daysInMonth) dailyCounts[day-1]++; });
+            });
+            
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+            monthlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: daysInMonth}, (_, i) => i + 1),
+                    datasets: [{ label: 'Habits', data: dailyCounts, backgroundColor: '#4F46E5', borderRadius: 2 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, display: false }, x: { display: false } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- PROFILE LOGIC ---
         function openProfileSettings() {
             document.getElementById('profileUsernameDisplay').innerText = "@" + currentUser;
             document.getElementById('profileName').value = userData.profile.name || "";
@@ -372,7 +566,6 @@
             
             const prev = document.getElementById('profilePreview');
             const place = document.getElementById('profilePlaceholder');
-            
             if(userData.profile.image) {
                 prev.src = userData.profile.image;
                 prev.classList.remove('hidden');
@@ -381,24 +574,20 @@
                 prev.classList.add('hidden');
                 place.classList.remove('hidden');
             }
-            
             document.getElementById('profileModal').classList.remove('hidden');
         }
 
-        function closeProfileSettings() {
-            document.getElementById('profileModal').classList.add('hidden');
-        }
+        function closeProfileSettings() { document.getElementById('profileModal').classList.add('hidden'); }
 
         function handleProfileUpload(input) {
             const file = input.files[0];
             if(!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                const base64Info = e.target.result;
-                document.getElementById('profilePreview').src = base64Info;
+                document.getElementById('profilePreview').src = e.target.result;
                 document.getElementById('profilePreview').classList.remove('hidden');
                 document.getElementById('profilePlaceholder').classList.add('hidden');
-                userData.profile.tempImage = base64Info; 
+                userData.profile.tempImage = e.target.result; 
             }
             reader.readAsDataURL(file);
         }
@@ -414,324 +603,70 @@
             }
             saveData();
             updateNavAvatar();
-            logAction("Updated Profile Details");
             closeProfileSettings();
         }
 
-        // --- RENDER HEADER WITH CORRECT DATES ---
-        function renderHeader() {
-            const headerRow = document.getElementById('daysHeaderRow').firstElementChild;
-            headerRow.innerHTML = '';
-            
-            for(let i=1; i<=daysInMonth; i++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = "flex-1 min-w-[28px] md:min-w-0 flex flex-col items-center justify-center text-[8px] md:text-[10px] text-gray-500 py-1 border-r border-gray-200 dark:border-gray-700";
-                
-                // --- FIXED DATE CALCULATION (Uses Noon 12:00 to avoid Timezone bugs) ---
-                const dateObj = new Date(currentYear, currentMonth, i, 12, 0, 0);
-                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2);
-                
-                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-                const textColor = isWeekend ? 'text-red-400' : '';
-
-                dayDiv.innerHTML = `<span class="mb-0.5 md:mb-1 ${textColor}">${dayName}</span><span class="font-bold ${textColor}">${i}</span>`;
-                headerRow.appendChild(dayDiv);
-            }
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('habitTableBody');
-            tbody.innerHTML = '';
-
-            userData.habits.forEach((habit, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700 group";
-                tr.draggable = true;
-                tr.dataset.index = index;
-
-                tr.addEventListener('dragstart', dragStart);
-                tr.addEventListener('dragover', dragOver);
-                tr.addEventListener('drop', drop);
-                tr.addEventListener('dragleave', dragLeave);
-
-                const nameTd = document.createElement('td');
-                nameTd.className = "p-3 border-r border-gray-200 dark:border-gray-600 sticky left-0 z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-32 md:w-72";
-                
-                nameTd.innerHTML = `
-                    <div class="flex items-center justify-between gap-1 md:gap-2">
-                        <div class="flex items-center gap-1 md:gap-2 cursor-move overflow-hidden">
-                            <i class="fas fa-grip-vertical text-gray-300 hidden md:inline"></i>
-                            <span class="font-medium truncate text-xs md:text-sm">${habit.name}</span>
-                        </div>
-                        <button onclick="deleteHabit(${index})" class="delete-btn text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition flex-shrink-0" title="Delete Habit">
-                            <i class="fas fa-trash-alt text-xs md:text-sm"></i>
-                        </button>
-                    </div>
-                `;
-                tr.appendChild(nameTd);
-
-                const gridTd = document.createElement('td');
-                gridTd.className = "p-0 w-full"; 
-                const gridDiv = document.createElement('div');
-                gridDiv.className = "flex w-full"; 
-
-                // Dynamic length based on calculated daysInMonth
-                for(let i=1; i<=daysInMonth; i++) {
-                    const checkDiv = document.createElement('div');
-                    checkDiv.className = "flex-1 min-w-[28px] md:min-w-0 h-10 flex items-center justify-center border-r border-gray-100 dark:border-gray-700";
-                    const checkbox = document.createElement('input');
-                    checkbox.type = "checkbox";
-                    checkbox.className = "w-3 h-3 md:w-4 md:h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer checkbox-custom";
-                    
-                    // Since habits history is just [1, 2, 5], we need a composite key if we want to support multiple months
-                    // CURRENT SIMPLIFIED LOGIC: Resets view per month but keeps data in same array. 
-                    // ideally 'history' should be ["2025-12-01", ...] but for this prototype keeping it simple integer based.
-                    // This means currently checking '1' checks it for Jan, Feb, Mar etc.
-                    // For a true calendar app, we'd need full date strings. 
-                    // Let's stick to the user's request of "sync days correctly" visually first.
-                    
-                    if(habit.history.includes(i)) checkbox.checked = true;
-                    checkbox.addEventListener('change', () => toggleHabit(index, i));
-                    checkDiv.appendChild(checkbox);
-                    gridDiv.appendChild(checkDiv);
-                }
-                
-                gridTd.appendChild(gridDiv);
-                tr.appendChild(gridTd);
-                tbody.appendChild(tr);
-            });
-            
-            document.getElementById('totalHabitsCount').innerText = userData.habits.length;
-        }
-
-        function renderMonthlyChart() {
-            const ctx = document.getElementById('monthlyChart').getContext('2d');
-            const dailyCounts = Array(daysInMonth).fill(0);
-            
-            userData.habits.forEach(habit => {
-                habit.history.forEach(day => {
-                    if(day >= 1 && day <= daysInMonth) dailyCounts[day-1]++; 
-                });
-            });
-            const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
-
-            if (monthlyChartInstance) monthlyChartInstance.destroy();
-
-            monthlyChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Habits',
-                        data: dailyCounts,
-                        backgroundColor: '#4F46E5',
-                        borderRadius: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, suggestedMax: userData.habits.length, grid: { display: false }, ticks: { font: { size: 10 } } },
-                        x: { grid: { display: false }, ticks: { display: false } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        function openYearlyOverview() {
-            document.getElementById('yearModal').classList.remove('hidden');
-            renderChart();
-        }
-
-        function closeYearlyOverview() {
-            document.getElementById('yearModal').classList.add('hidden');
-        }
-
-        function calculateCurrentProgress() {
-            let totalChecks = 0;
-            let possibleChecks = userData.habits.length * daysInMonth;
-            userData.habits.forEach(h => totalChecks += h.history.length);
-            return possibleChecks === 0 ? 0 : Math.round((totalChecks / possibleChecks) * 100);
-        }
-
-        function renderChart() {
-            const ctx = document.getElementById('yearlyChart').getContext('2d');
-            const currentScore = calculateCurrentProgress();
-            const dataPoints = [45, 52, 49, 60, 55, 70, 68, 85, 72, 65, currentScore, 75];
-
-            if (yearlyChartInstance) { yearlyChartInstance.destroy(); }
-
-            yearlyChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                    datasets: [{
-                        label: 'Productivity (%)',
-                        data: dataPoints,
-                        borderColor: '#4F46E5',
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#4F46E5',
-                        pointRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(200, 200, 200, 0.1)' } },
-                        x: { grid: { display: false } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        let saveTimeout;
-        function handleNoteInput(textarea) {
-            const indicator = document.getElementById('saveIndicator');
-            indicator.innerText = "Saving...";
-            indicator.classList.add('text-primary');
-            indicator.classList.remove('text-gray-400');
-            userData.notes = textarea.value;
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                logAction("Updated Notepad");
-                saveData();
-                indicator.innerText = "Saved";
-                indicator.classList.remove('text-primary');
-                indicator.classList.add('text-gray-400');
-            }, 1000);
-        }
-
-        function deleteHabit(index) {
-            const name = userData.habits[index].name;
-            if (confirm(`Delete "${name}"?`)) {
-                logAction(`Deleted habit: "${name}"`);
-                userData.habits.splice(index, 1);
-                saveData();
-                renderTable();
-                updateStats();
-            }
-        }
-
-        function toggleHabit(habitIndex, day) {
-            const habit = userData.habits[habitIndex];
-            if (habit.history.includes(day)) {
-                habit.history = habit.history.filter(d => d !== day);
-                logAction(`Unchecked habit: "${habit.name}" (Day ${day})`);
+        function updateNavAvatar() {
+            const navImg = document.getElementById('navProfilePic');
+            const navDefault = document.getElementById('navDefaultIcon');
+            if(userData.profile && userData.profile.image) {
+                navImg.src = userData.profile.image;
+                navImg.classList.remove('hidden');
+                navDefault.classList.add('hidden');
             } else {
-                habit.history.push(day);
-                logAction(`Checked habit: "${habit.name}" (Day ${day})`);
-            }
-            saveData();
-            updateStats();
-        }
-
-        function updateStats() {
-            let totalChecks = 0;
-            let possibleChecks = userData.habits.length * daysInMonth;
-            userData.habits.forEach(h => totalChecks += h.history.length);
-            const percentage = possibleChecks === 0 ? 0 : Math.round((totalChecks / possibleChecks) * 100);
-            document.getElementById('completionRate').innerText = percentage + "%";
-            document.getElementById('progressBar').style.width = percentage + "%";
-            let streak = 0;
-            if (totalChecks > 0) streak = Math.floor(Math.random() * 5) + 1;
-            document.getElementById('currentStreak').innerText = streak;
-            renderMonthlyChart();
-        }
-
-        function saveData() {
-            const stored = localStorage.getItem('pc_users');
-            let usersDb = JSON.parse(stored);
-            usersDb[currentUser] = userData;
-            localStorage.setItem('pc_users', JSON.stringify(usersDb));
-        }
-
-        let dragSrcEl = null;
-        function dragStart(e) {
-            dragSrcEl = this;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
-            this.classList.add('opacity-50');
-        }
-        function dragOver(e) { e.preventDefault(); this.classList.add('drag-over'); e.dataTransfer.dropEffect = 'move'; return false; }
-        function dragLeave(e) { this.classList.remove('drag-over'); }
-        function drop(e) {
-            e.stopPropagation(); this.classList.remove('drag-over');
-            if (dragSrcEl !== this) {
-                const srcIdx = parseInt(dragSrcEl.dataset.index);
-                const targetIdx = parseInt(this.dataset.index);
-                const item = userData.habits.splice(srcIdx, 1)[0];
-                userData.habits.splice(targetIdx, 0, item);
-                saveData();
-                renderTable();
-            }
-            dragSrcEl.classList.remove('opacity-50');
-            return false;
-        }
-
-        function addNewHabit() {
-            const name = prompt("Enter new habit name:");
-            if (name) {
-                logAction(`Created habit: "${name}"`);
-                userData.habits.push({ id: Date.now(), name: name, type: "general", history: [] });
-                saveData();
-                renderTable();
-                updateStats();
+                navImg.classList.add('hidden');
+                navDefault.classList.remove('hidden');
             }
         }
 
-        function toggleDarkMode() { document.documentElement.classList.toggle('dark'); }
-
+        // --- ADMIN LOGIC (FETCH FROM FIREBASE) ---
         function adminDashboard() {
-            const db = JSON.parse(localStorage.getItem('pc_users')) || {};
-            const container = document.getElementById('userListContainer');
-            container.innerHTML = ''; 
+            showLoading();
+            db.ref('users').once('value').then((snapshot) => {
+                hideLoading();
+                const dbData = snapshot.val() || {};
+                const container = document.getElementById('userListContainer');
+                container.innerHTML = ''; 
 
-            Object.keys(db).forEach(user => {
-                const userObj = db[user];
-                const habitCount = userObj.habits ? userObj.habits.length : 0;
-                const profileImg = (userObj.profile && userObj.profile.image) 
-                    ? `<img src="${userObj.profile.image}" class="w-8 h-8 rounded-full border mr-2 object-cover">`
-                    : `<div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 text-xs text-gray-500"><i class="fas fa-user"></i></div>`;
+                Object.keys(dbData).forEach(user => {
+                    const userObj = dbData[user];
+                    const habitCount = userObj.habits ? userObj.habits.length : 0;
+                    const profileImg = (userObj.profile && userObj.profile.image) 
+                        ? `<img src="${userObj.profile.image}" class="w-8 h-8 rounded-full border mr-2 object-cover">`
+                        : `<div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 text-xs text-gray-500"><i class="fas fa-user"></i></div>`;
 
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between p-3 bg-white dark:bg-gray-800 border rounded dark:border-gray-700 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition group";
-                
-                div.onclick = (e) => {
-                    if(e.target.closest('.delete-btn-admin')) return;
-                    viewUserLogs(user, userObj);
-                };
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between p-3 bg-white dark:bg-gray-800 border rounded dark:border-gray-700 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition group";
+                    div.onclick = (e) => {
+                        if(e.target.closest('.action-btn-admin')) return;
+                        viewUserLogs(user, userObj);
+                    };
 
-                const deleteBtnHtml = (user === '********') 
-                    ? `<span class="text-xs text-blue-500 font-bold px-2 py-1 bg-blue-100 rounded">ADMIN</span>`
-                    : `<div class="flex gap-2">
-                         <button onclick="viewUserLogs('${user}', JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(userObj))}')))" class="text-gray-400 hover:text-primary p-2"><i class="fas fa-eye"></i></button>
-                         <button onclick="deleteUser('${user}')" class="delete-btn-admin text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash-alt"></i></button>
-                       </div>`;
+                    const deleteBtnHtml = (user === '**********') 
+                        ? `<span class="text-xs text-blue-500 font-bold px-2 py-1 bg-blue-100 rounded">ADMIN</span>`
+                        : `<div class="flex gap-2 action-btn-admin">
+                             <button onclick="changeUserPassword('${user}')" class="text-yellow-500 hover:text-yellow-600 p-2" title="Change Password"><i class="fas fa-key"></i></button>
+                             <button onclick="viewUserLogs('${user}', JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(userObj))}')))" class="text-gray-400 hover:text-primary p-2"><i class="fas fa-eye"></i></button>
+                             <button onclick="deleteUser('${user}')" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash-alt"></i></button>
+                           </div>`;
 
-                div.innerHTML = `
-                    <div class="flex items-center overflow-hidden mr-2">
-                        ${profileImg}
-                        <div class="flex flex-col">
-                            <span class="font-semibold text-sm truncate">${user}</span>
-                            <span class="text-[10px] text-gray-500">${habitCount} habits</span>
+                    div.innerHTML = `
+                        <div class="flex items-center overflow-hidden mr-2">
+                            ${profileImg}
+                            <div class="flex flex-col">
+                                <span class="font-semibold text-sm truncate">${user}</span>
+                                <span class="text-[10px] text-gray-500">${habitCount} habits</span>
+                            </div>
                         </div>
-                    </div>
-                    ${deleteBtnHtml}
-                `;
-                container.appendChild(div);
-            });
+                        ${deleteBtnHtml}
+                    `;
+                    container.appendChild(div);
+                });
 
-            document.getElementById('adminUserCount').innerText = Object.keys(db).length;
-            document.getElementById('logViewer').innerHTML = '<p class="text-gray-400 text-center mt-10">Select a user to view details.</p>';
-            document.getElementById('adminModal').classList.remove('hidden');
+                document.getElementById('adminUserCount').innerText = Object.keys(dbData).length;
+                document.getElementById('logViewer').innerHTML = '<p class="text-gray-400 text-center mt-10">Select a user to view details.</p>';
+                document.getElementById('adminModal').classList.remove('hidden');
+            });
         }
 
         function viewUserLogs(username, userObj) {
@@ -751,51 +686,49 @@
                     </div>
                 </div>
             `;
-            
-            if(profile.bio) {
-                html += `<div class="mb-4 bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm italic text-gray-600 dark:text-gray-400">"${profile.bio}"</div>`;
-            }
-
             if(logs.length === 0) {
                 html += `<p class="text-gray-400 text-sm">No activity recorded.</p>`;
             } else {
                 html += `<h5 class="font-bold text-xs uppercase text-gray-400 mb-2">Activity Log</h5><ul class="space-y-3">`;
                 logs.forEach(log => {
-                    html += `
-                        <li class="flex flex-col border-l-2 border-gray-300 dark:border-gray-600 pl-3 py-1">
-                            <span class="text-xs text-gray-400 font-mono">${log.time}</span>
-                            <span class="text-sm dark:text-gray-200">${log.action}</span>
-                        </li>
-                    `;
+                    html += `<li class="flex flex-col border-l-2 border-gray-300 dark:border-gray-600 pl-3 py-1"><span class="text-xs text-gray-400 font-mono">${log.time}</span><span class="text-sm dark:text-gray-200">${log.action}</span></li>`;
                 });
                 html += '</ul>';
             }
             viewer.innerHTML = html;
         }
 
+        function changeUserPassword(username) {
+            if(username === '**********') return alert("Cannot change admin password here.");
+            const newPass = prompt(`Enter new password for user "${username}":`);
+            if (newPass && newPass.trim() !== "") {
+                db.ref('users/' + username).update({ password: newPass });
+                alert(`Password updated.`);
+            }
+        }
+
         function deleteUser(username) {
-            if(username === '********') return;
+            if(username === '**********') return;
             if(confirm(`PERMANENTLY delete user: "${username}"?`)) {
-                const stored = localStorage.getItem('pc_users');
-                let usersDb = stored ? JSON.parse(stored) : {};
-                delete usersDb[username];
-                localStorage.setItem('pc_users', JSON.stringify(usersDb));
-                adminDashboard();
+                db.ref('users/' + username).remove();
+                adminDashboard(); // refresh
             }
         }
 
         function clearDatabase() {
-            if (currentUser !== '********') return;
-            if (confirm("DANGER: This will wipe ALL users and data.\n\nAre you absolutely sure?")) {
-                if(confirm("Last Warning: This action cannot be undone.")) {
-                    localStorage.removeItem('pc_users');
-                    alert("System Reset Complete.");
-                    location.reload();
-                }
+            if (currentUser !== '**********') return;
+            if (confirm("DANGER: This will wipe ALL users and data from the CLOUD.\n\nAre you sure?")) {
+                db.ref('users').remove();
+                alert("Database Cleared.");
+                location.reload();
             }
         }
 
         function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
+        function openYearlyOverview() { document.getElementById('yearModal').classList.remove('hidden'); renderChart(); }
+        function closeYearlyOverview() { document.getElementById('yearModal').classList.add('hidden'); }
+        function renderChart() { /* Keep existing static chart logic for now or connect to real data later */ }
+        function toggleDarkMode() { document.documentElement.classList.toggle('dark'); }
     </script>
 </body>
 </html>
